@@ -49,3 +49,14 @@ Route::get('/setup-database-rahasia', function () {
     ]);
     return 'MANTAP BOS! Database NIKOS STORE Berhasil Di-Install dan Diisi!';
 });
+Route::get('/buka-gembok-admin', function () {
+    \App\Models\User::updateOrCreate(
+        ['email' => 'admin@ppob.com'], // Cari email ini
+        [
+            'name' => 'Bos Admin',
+            'password' => bcrypt('admin123'), // Paksa password jadi admin123
+            'pin' => '123456', // Beri PIN default
+        ]
+    );
+    return 'KUNCI MASTER BERHASIL! Silakan login dengan Email: admin@ppob.com | Password: admin123';
+});
