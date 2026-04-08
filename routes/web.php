@@ -41,3 +41,11 @@ Route::middleware(['auth'])->group(function () {
     // Rute untuk Sinkronisasi Harga Digiflazz (Otomatis)
     Route::post('/admin/sync', [AdminController::class, 'syncDigiflazz']);
 });
+
+Route::get('/setup-database-rahasia', function () {
+    \Illuminate\Support\Facades\Artisan::call('migrate:fresh', [
+        '--seed' => true,
+        '--force' => true
+    ]);
+    return 'MANTAP BOS! Database NIKOS STORE Berhasil Di-Install dan Diisi!';
+});
