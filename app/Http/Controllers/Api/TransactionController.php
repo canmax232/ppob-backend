@@ -97,4 +97,26 @@ class TransactionController extends Controller
             return response()->json(['success' => false, 'message' => 'Gagal terhubung ke Server Pusat PPOB.'], 500);
         }
     }
+
+    public function topup(Request $request)
+    {
+        // 1. Validasi input (minimal Rp 10.000)
+        $request->validate([
+            'amount' => 'required|numeric|min:10000',
+        ]);
+
+        // 2. Ambil data user yang sedang login
+        $user = $request->user();
+
+        // 3. Tambahkan saldo
+        $user->balance += $request->amount;
+        $user->save();
+
+        // 4. Beri jawaban sukses ke Flutter
+        return response()->json([
+            'success' => true,
+            'message' => 'Top Up sebesar Rp ' . number_format($request->amount, 0, ',', '.') . ' berhasil ditambahkan!',
+            'new_balance' => $user->balance
+        ], 200);
+    }
 }
