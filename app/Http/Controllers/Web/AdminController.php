@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\Product;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http; // Tambahan untuk tembak API Digiflazz
+use Illuminate\Support\Facades\Http; 
 
 class AdminController extends Controller
 {
@@ -46,12 +46,12 @@ class AdminController extends Controller
     {
         $request->validate([
             'price' => 'required|numeric',
-            'product_code' => 'required|string' // Validasi kode produk baru
+            'product_code' => 'required|string' 
         ]);
         
         $product = Product::findOrFail($id);
         $product->price = $request->price;
-        $product->product_code = $request->product_code; // Simpan kode SKU baru
+        $product->product_code = $request->product_code; 
         $product->save();
 
         return back()->with('success', 'Produk ' . $product->name . ' berhasil diperbarui!');
@@ -60,7 +60,7 @@ class AdminController extends Controller
     // Fungsi Sinkronisasi Harga Otomatis dari Digiflazz (1-Klik)
     public function syncDigiflazz()
     {
-        // 1. Ambil sandi, berikan nilai default kosong agar tidak error jika tidak ditemukan
+        // 1. Ambil sandi
         $username = env('DIGIFLAZZ_USERNAME', '');
         $apiKey = env('DIGIFLAZZ_API_KEY', '');
         
@@ -80,13 +80,11 @@ class AdminController extends Controller
             ]);
 
             $apiResult = $response->json();
-            // TAMBAHKAN BARIS INI UNTUK DEBUG
-            dd($apiResult);
 
-            // 4. Jika sukses dan data yang dikembalikan adalah array (daftar produk)
+            // 4. Jika sukses dan data yang dikembalikan adalah array
             if (isset($apiResult['data']) && is_array($apiResult['data'])) {
                 
-                // Jika isinya ternyata pesan error dari Digiflazz (bukan daftar produk)
+                // Jika isinya pesan error dari Digiflazz
                 if (isset($apiResult['data']['message'])) {
                     return back()->with('error', 'Ditolak Digiflazz: ' . $apiResult['data']['message']);
                 }
@@ -96,11 +94,11 @@ class AdminController extends Controller
 
                 foreach ($products as $item) {
                     if (isset($item['buyer_sku_code']) && isset($item['price'])) {
-                        // Cari dan Update Harga
+                        
+                        // Cari dan Update, atau Buat Baru jika belum ada
                         $product = Product::updateOrCreate(
-                            ['product_code' => $item['buyer_sku_code']], // Cari berdasarkan SKU ini
+                            ['product_code' => $item['buyer_sku_code']], 
                             [
-                                // Jika tidak ketemu, buat baru dengan nama & harga ini
                                 'name' => $item['product_name'] ?? 'Produk ' . $item['buyer_sku_code'],
                                 'price' => $item['price'] + 2000 
                             ]
