@@ -57,7 +57,7 @@ class AdminController extends Controller
         return back()->with('success', 'Produk ' . $product->name . ' berhasil diperbarui!');
     }
 
-    // Fungsi Sinkronisasi Harga Otomatis dari Digiflazz (1-Klik)
+    // --- INI UPDATE FINAL SINKRONISASI BOS ---
     public function syncDigiflazz()
     {
         // 1. Ambil sandi
