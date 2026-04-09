@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Product;
 use App\Models\Transaction;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http; 
 
@@ -92,6 +93,11 @@ class AdminController extends Controller
                 $products = $apiResult['data'];
                 $syncedCount = 0;
 
+                // 1. Buat Kategori "Keranjang Digiflazz" secara otomatis jika belum ada
+                $defaultCategory = Category::firstOrCreate([
+                    'name' => 'Keranjang Digiflazz'
+                ]);
+
                 foreach ($products as $item) {
                     if (isset($item['buyer_sku_code']) && isset($item['price'])) {
                         
@@ -100,7 +106,8 @@ class AdminController extends Controller
                             ['product_code' => $item['buyer_sku_code']], 
                             [
                                 'name' => $item['product_name'] ?? 'Produk ' . $item['buyer_sku_code'],
-                                'price' => $item['price'] + 2000 
+                                'price' => $item['price'] + 2000,
+                                'category_id' => $defaultCategory->id // <--- INI KUNCI JAWABANNYA!
                             ]
                         );
 
