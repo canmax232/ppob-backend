@@ -106,8 +106,9 @@ class AdminController extends Controller
                             ['product_code' => $item['buyer_sku_code']], 
                             [
                                 'name' => $item['product_name'] ?? 'Produk ' . $item['buyer_sku_code'],
-                                'price' => $item['price'] + 2000,
-                                'category_id' => $defaultCategory->id // <--- INI KUNCI JAWABANNYA!
+                                'original_price' => $item['price'], // <--- TAMBAHAN BARU: HARGA MODAL
+                                'price' => $item['price'] + 2000,   // HARGA JUAL (Modal + Untung)
+                                'category_id' => $defaultCategory->id 
                             ]
                         );
 
