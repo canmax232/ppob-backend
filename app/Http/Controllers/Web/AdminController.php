@@ -97,12 +97,16 @@ class AdminController extends Controller
                 foreach ($products as $item) {
                     if (isset($item['buyer_sku_code']) && isset($item['price'])) {
                         // Cari dan Update Harga
-                        $updated = Product::where('product_code', $item['buyer_sku_code'])
-                            ->update([
-                                'price' => $item['price'] + 2000 // Menambah untung Rp 2.000
-                            ]);
-                        
-                        if ($updated) {
+                        $product = Product::updateOrCreate(
+                            ['product_code' => $item['buyer_sku_code']], // Cari berdasarkan SKU ini
+                            [
+                                // Jika tidak ketemu, buat baru dengan nama & harga ini
+                                'name' => $item['product_name'] ?? 'Produk ' . $item['buyer_sku_code'],
+                                'price' => $item['price'] + 2000 
+                            ]
+                        );
+
+                        if ($product) {
                             $syncedCount++;
                         }
                     }
