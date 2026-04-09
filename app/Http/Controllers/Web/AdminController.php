@@ -60,8 +60,6 @@ class AdminController extends Controller
 
     // --- INI UPDATE FINAL SINKRONISASI BOS ---
     public function syncDigiflazz()
-    {// --- INI UPDATE FINAL SINKRONISASI BOS ---
-    public function syncDigiflazz()
     {
         // 1. Ambil sandi
         $username = env('DIGIFLAZZ_USERNAME', '');
