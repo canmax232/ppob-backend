@@ -73,13 +73,15 @@ class AdminController extends Controller
         $sign = md5($username . $apiKey . "pricelist");
 
         try {
-            $response = \Illuminate\Support\Facades\Http::post('https://api.digiflazz.com/v1/price-list', [
+            $response = Http::post('https://api.digiflazz.com/v1/price-list', [
                 'cmd'  => 'prepaid',
                 'username' => $username,
                 'sign' => $sign
             ]);
 
             $apiResult = $response->json();
+            // TAMBAHKAN BARIS INI UNTUK DEBUG
+            dd($apiResult);
 
             // 4. Jika sukses dan data yang dikembalikan adalah array (daftar produk)
             if (isset($apiResult['data']) && is_array($apiResult['data'])) {
