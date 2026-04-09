@@ -60,6 +60,8 @@ class AdminController extends Controller
 
     // --- INI UPDATE FINAL SINKRONISASI BOS ---
     public function syncDigiflazz()
+    {// --- INI UPDATE FINAL SINKRONISASI BOS ---
+    public function syncDigiflazz()
     {
         // 1. Ambil sandi
         $username = env('DIGIFLAZZ_USERNAME', '');
@@ -93,22 +95,28 @@ class AdminController extends Controller
                 $products = $apiResult['data'];
                 $syncedCount = 0;
 
-                // 1. Buat Kategori "Keranjang Digiflazz" secara otomatis jika belum ada
-                $defaultCategory = Category::firstOrCreate([
-                    'name' => 'Keranjang Digiflazz'
-                ]);
+                // KITA TIDAK LAGI MEMBUAT 1 KERANJANG DEFAULT DI SINI.
+                // KITA AKAN BUAT OTOMATIS DI DALAM LOOP SESUAI JENISNYA.
 
                 foreach ($products as $item) {
                     if (isset($item['buyer_sku_code']) && isset($item['price'])) {
                         
+                        // KUNCI JAWABAN: Ambil nama kategori asli dari Digiflazz (Misal: "Pulsa", "Data", "Games")
+                        $kategoriAsli = $item['category'] ?? 'Lainnya';
+
+                        // Sistem akan mencari kategori bernama "Pulsa", kalau belum ada, dia buatkan otomatis
+                        $category = Category::firstOrCreate([
+                            'name' => $kategoriAsli
+                        ]);
+
                         // Cari dan Update, atau Buat Baru jika belum ada
                         $product = Product::updateOrCreate(
                             ['product_code' => $item['buyer_sku_code']], 
                             [
                                 'name' => $item['product_name'] ?? 'Produk ' . $item['buyer_sku_code'],
-                                'original_price' => $item['price'], // <--- TAMBAHAN BARU: HARGA MODAL
-                                'price' => $item['price'] + 2000,   // HARGA JUAL (Modal + Untung)
-                                'category_id' => $defaultCategory->id 
+                                'original_price' => $item['price'], 
+                                'price' => $item['price'] + 2000,
+                                'category_id' => $category->id // <--- Produk masuk ke kategori yang tepat!
                             ]
                         );
 
@@ -117,7 +125,7 @@ class AdminController extends Controller
                         }
                     }
                 }
-                return back()->with('success', 'Berhasil sinkronisasi harga untuk ' . $syncedCount . ' produk dari Digiflazz!');
+                return back()->with('success', 'Berhasil memilah dan sinkronisasi ' . $syncedCount . ' produk dari Digiflazz!');
             }
 
             // Jika format balasan aneh
