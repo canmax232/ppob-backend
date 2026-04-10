@@ -119,6 +119,7 @@ class AdminController extends Controller
                             ['product_code' => $item['buyer_sku_code']], 
                             [
                                 'name' => $productName,
+                                'brand' => $item['brand'] ?? 'Lainnya', // <--- INI KUNCI JAWABANNYA
                                 'original_price' => $item['price'], 
                                 'price' => $item['price'] + 2000,
                                 'category_id' => $category->id 

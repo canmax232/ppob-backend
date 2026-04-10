@@ -9,7 +9,15 @@ class Product extends Model
 {
     use HasFactory;
 
-    protected $guarded = ['id'];
+    // Menggunakan fillable agar lebih aman saat menerima data dari API Digiflazz
+    protected $fillable = [
+        'category_id', 
+        'product_code', 
+        'name', 
+        'brand',          // <--- Laci brand sudah siap!
+        'original_price', 
+        'price'
+    ];
 
     // Relasi: 1 Produk milik 1 Kategori
     public function category()

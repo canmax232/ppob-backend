@@ -18,6 +18,7 @@ return new class extends Migration
             
             $table->string('product_code')->unique(); // cth: TLKM10, DANA20
             $table->string('name'); // cth: Telkomsel 10.000
+            $table->string('brand')->nullable();
             $table->integer('original_price'); // Harga modal dari provider
             $table->integer('price'); // Harga jual ke pelanggan di Flutter
             $table->enum('status', ['active', 'inactive', 'gangguan'])->default('active');
