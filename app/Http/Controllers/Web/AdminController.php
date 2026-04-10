@@ -100,7 +100,7 @@ class AdminController extends Controller
                     if (isset($item['buyer_sku_code']) && isset($item['price'])) {
                         
                         // KUNCI JAWABAN: Ambil nama kategori asli dari Digiflazz (Misal: "Pulsa", "Data", "Games")
-                        $kategoriAsli = $item['category'] ?? 'Lainnya';
+                        $kategoriAsli = $item['brand'] ?? $item['category'] ?? 'Lainnya';
 
                         // Sistem akan mencari kategori bernama "Pulsa", kalau belum ada, dia buatkan otomatis
                         $category = Category::firstOrCreate([
