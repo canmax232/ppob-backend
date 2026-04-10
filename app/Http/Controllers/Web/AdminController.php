@@ -59,18 +59,16 @@ class AdminController extends Controller
     }
 
     // --- INI UPDATE FINAL SINKRONISASI BOS ---
+    // --- INI UPDATE FINAL SINKRONISASI BOS ---
     public function syncDigiflazz()
     {
-        // 1. Ambil sandi
         $username = env('DIGIFLAZZ_USERNAME', '');
         $apiKey = env('DIGIFLAZZ_API_KEY', '');
         
-        // 2. Cek apakah sandi sudah diisi
         if (empty($username) || empty($apiKey)) {
             return back()->with('error', 'Username atau API Key Digiflazz belum diatur di file .env!');
         }
 
-        // 3. Rumus Wajib Digiflazz
         $sign = md5($username . $apiKey . "pricelist");
 
         try {
@@ -82,10 +80,7 @@ class AdminController extends Controller
 
             $apiResult = $response->json();
 
-            // 4. Jika sukses dan data yang dikembalikan adalah array
             if (isset($apiResult['data']) && is_array($apiResult['data'])) {
-                
-                // Jika isinya pesan error dari Digiflazz
                 if (isset($apiResult['data']['message'])) {
                     return back()->with('error', 'Ditolak Digiflazz: ' . $apiResult['data']['message']);
                 }
@@ -93,28 +88,40 @@ class AdminController extends Controller
                 $products = $apiResult['data'];
                 $syncedCount = 0;
 
-                // KITA TIDAK LAGI MEMBUAT 1 KERANJANG DEFAULT DI SINI.
-                // KITA AKAN BUAT OTOMATIS DI DALAM LOOP SESUAI JENISNYA.
-
                 foreach ($products as $item) {
                     if (isset($item['buyer_sku_code']) && isset($item['price'])) {
                         
-                        // KUNCI JAWABAN: Ambil nama kategori asli dari Digiflazz (Misal: "Pulsa", "Data", "Games")
-                        $kategoriAsli = $item['brand'] ?? $item['category'] ?? 'Lainnya';
+                        $kategoriAsli = $item['category'] ?? 'Lainnya';
+                        $katLower = strtolower($kategoriAsli);
 
-                        // Sistem akan mencari kategori bernama "Pulsa", kalau belum ada, dia buatkan otomatis
-                        $category = Category::firstOrCreate([
-                            'name' => $kategoriAsli
-                        ]);
+                        // PEMETAAN CERDAS KE MENU MANUAL ANDA
+                        if (str_contains($katLower, 'pulsa')) {
+                            $namaKategori = 'Pulsa Nasional';
+                        } elseif (str_contains($katLower, 'data')) {
+                            $namaKategori = 'Paket Data';
+                        } elseif (str_contains($katLower, 'game')) {
+                            $namaKategori = 'Voucher Game';
+                        } elseif (str_contains($katLower, 'pln')) {
+                            $namaKategori = 'Token PLN';
+                        } elseif (str_contains($katLower, 'e-money') || str_contains($katLower, 'wallet')) {
+                            $namaKategori = 'e-Wallet';
+                        } else {
+                            $namaKategori = 'Lainnya';
+                        }
 
-                        // Cari dan Update, atau Buat Baru jika belum ada
+                        // Hubungkan ke Kategori Utama Anda
+                        $category = Category::firstOrCreate(['name' => $namaKategori]);
+
+                        $productName = $item['product_name'] ?? 'Produk ' . $item['buyer_sku_code'];
+                        
+                        // Cari dan Update
                         $product = Product::updateOrCreate(
                             ['product_code' => $item['buyer_sku_code']], 
                             [
-                                'name' => $item['product_name'] ?? 'Produk ' . $item['buyer_sku_code'],
+                                'name' => $productName,
                                 'original_price' => $item['price'], 
                                 'price' => $item['price'] + 2000,
-                                'category_id' => $category->id // <--- Produk masuk ke kategori yang tepat!
+                                'category_id' => $category->id 
                             ]
                         );
 
@@ -123,14 +130,11 @@ class AdminController extends Controller
                         }
                     }
                 }
-                return back()->with('success', 'Berhasil memilah dan sinkronisasi ' . $syncedCount . ' produk dari Digiflazz!');
+                return back()->with('success', 'Berhasil memilah ' . $syncedCount . ' produk ke Menu Utama Anda!');
             }
-
-            // Jika format balasan aneh
-            return back()->with('error', 'Gagal mengambil data. Pesan dari sistem: ' . json_encode($apiResult));
-
+            return back()->with('error', 'Gagal mengambil data. Pesan: ' . json_encode($apiResult));
         } catch (\Exception $e) {
-            return back()->with('error', 'Terjadi kesalahan jaringan ke server Digiflazz: ' . $e->getMessage());
+            return back()->with('error', 'Terjadi kesalahan jaringan: ' . $e->getMessage());
         }
     }
 }
