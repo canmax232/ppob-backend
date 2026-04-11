@@ -2,32 +2,42 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\PPOBController;
+
+// Import semua Controller yang dibutuhkan
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\PPOBController;
 use App\Http\Controllers\Api\TopupController;
 use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\Api\DepositController; // <--- Import Controller Midtrans yang baru kita buat
 
-// Rute Publik (Tidak perlu login)
+// =========================================================
+// RUTE PUBLIK (Bisa diakses tanpa login)
+// =========================================================
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Rute Terlindungi (Hanya bisa diakses jika menyertakan Token Login dari Flutter)
+// =========================================================
+// RUTE TERLINDUNGI (Wajib bawa Token dari Flutter)
+// =========================================================
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/logout', [AuthController::class, 'logout']);
-    Route::get('/profile', [AuthController::class, 'profile']); // Baru
-    Route::post('/update-password', [AuthController::class, 'updatePassword']); // Baru
-    Route::post('/set-pin', [AuthController::class, 'setPin']); // Baru
-    Route::get('/profile', [ProfileController::class, 'index']);
-    Route::get('/kategori', [CategoryController::class, 'index']);
-    // Tambahkan baris ini di dalam grup auth:sanctum
-    Route::post('/topup-midtrans', [App\Http\Controllers\Api\TransactionController::class, 'requestMidtrans']);
     
-    // Ambil Data Home (Sekarang butuh token agar tahu siapa yang login)
+    // --- 1. Kelola Akun & Profil ---
+    Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/profile', [AuthController::class, 'profile']); 
+    Route::post('/update-password', [AuthController::class, 'updatePassword']); 
+    Route::post('/set-pin', [AuthController::class, 'setPin']); 
+    
+    // --- 2. Data Aplikasi (Home) ---
+    // Menggunakan PPOBController untuk mengambil kategori beserta produknya
     Route::get('/kategori', [PPOBController::class, 'getCategoriesAndProducts']);
     
-    // Rute Transaksi Beli
+    // --- 3. Transaksi Pembelian (PPOB) ---
     Route::post('/transaction', [TransactionController::class, 'purchase']);
-
-Route::get('/transaction/history', [TransactionController::class, 'history']);
-    Route::post('/topup', [TopupController::class, 'requestTopup']);
+    Route::get('/transaction/history', [TransactionController::class, 'history']);
+    
+    // --- 4. Top Up & Deposit ---
+    Route::post('/topup', [TopupController::class, 'requestTopup']); // Top Up Manual (Lama)
+    
+    // Ini Rute Midtrans yang baru kita buat di langkah sebelumnya
+    Route::post('/deposit', [DepositController::class, 'store']); 
 });
