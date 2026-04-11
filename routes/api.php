@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\PPOBController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\TopupController;
 use App\Http\Controllers\Api\TransactionController;
 
 // Rute Publik (Tidak perlu login)
@@ -16,6 +17,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile', [AuthController::class, 'profile']); // Baru
     Route::post('/update-password', [AuthController::class, 'updatePassword']); // Baru
     Route::post('/set-pin', [AuthController::class, 'setPin']); // Baru
+    Route::get('/profile', [ProfileController::class, 'index']);
+    Route::get('/kategori', [CategoryController::class, 'index']);
     
     // Ambil Data Home (Sekarang butuh token agar tahu siapa yang login)
     Route::get('/kategori', [PPOBController::class, 'getCategoriesAndProducts']);
@@ -24,5 +27,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/transaction', [TransactionController::class, 'purchase']);
 
 Route::get('/transaction/history', [TransactionController::class, 'history']);
-    Route::post('/topup', [TransactionController::class, 'topup']);
+    Route::post('/topup', [TopupController::class, 'requestTopup']);
 });
