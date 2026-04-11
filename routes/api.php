@@ -19,6 +19,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/set-pin', [AuthController::class, 'setPin']); // Baru
     Route::get('/profile', [ProfileController::class, 'index']);
     Route::get('/kategori', [CategoryController::class, 'index']);
+    // Tambahkan baris ini di dalam grup auth:sanctum
+    Route::post('/topup-midtrans', [App\Http\Controllers\Api\TransactionController::class, 'requestMidtrans']);
     
     // Ambil Data Home (Sekarang butuh token agar tahu siapa yang login)
     Route::get('/kategori', [PPOBController::class, 'getCategoriesAndProducts']);

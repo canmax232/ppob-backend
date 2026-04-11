@@ -9,85 +9,55 @@ use Illuminate\Support\Str;
 
 class TopupController extends Controller
 {
-    public function requestTopup(Request $request)
+    public function requestMidtrans(Request $request)
     {
-        // 1. Validasi Input dari Flutter
         $request->validate([
-            'amount' => 'required|numeric|min:10000'
+            'amount' => 'required|numeric|min:10000',
+            'payment_type' => 'required|string'
         ]);
 
-        $user = auth()->user(); 
+        // 1. Siapkan Kunci Rahasia Midtrans Anda (Masukkan Server Key Sandbox Midtrans Anda di sini)
+        // Sebaiknya taruh di file .env dengan nama MIDTRANS_SERVER_KEY
+        $serverKey = env('MIDTRANS_SERVER_KEY', 'SB-Mid-server-xxxxxxxxxxxxxxxxx'); 
+
+        // 2. Buat ID Pesanan Unik
+        $orderId = 'TOPUP-' . time() . '-' . auth()->id();
         $amount = $request->amount;
-        
-        // 2. Buat Nomor Order Unik (Contoh: TOPUP-1-171234567-ABCDE)
-        $orderId = 'TOPUP-' . $user->id . '-' . time() . '-' . Str::random(5);
 
-        // 3. Ambil Kunci Rahasia dari .env
-        $serverKey = env('MIDTRANS_SERVER_KEY', '');
-        $isProduction = env('MIDTRANS_IS_PRODUCTION', false);
-        
-        // Pilih jalur: Uji Coba (Sandbox) atau Asli (Production)
-        $baseUrl = $isProduction
-            ? 'https://app.midtrans.com/snap/v1/transactions'
-            : 'https://app.sandbox.midtrans.com/snap/v1/transactions';
-
-        // Rumus Wajib Midtrans: ServerKey ditambah tanda titik dua (:), lalu di-Base64
-        $authString = base64_encode($serverKey . ':');
-
-        // 4. Susun Paket Data untuk dikirim ke Midtrans
-        $payload = [
-            'transaction_details' => [
-                'order_id' => $orderId,
-                'gross_amount' => (int) $amount,
-            ],
-            'customer_details' => [
-                'first_name' => $user->name,
-                'email' => $user->email,
-            ],
-            'item_details' => [
-                [
-                    'id' => 'TOPUP_SALDO',
-                    'price' => (int) $amount,
-                    'quantity' => 1,
-                    'name' => 'Deposit Saldo NIKOS STORE'
-                ]
-            ]
-        ];
-
-        // 5. Tembak API Midtrans menggunakan Laravel HTTP Client
         try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Basic ' . $authString,
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
-            ])->post($baseUrl, $payload);
+            // 3. Tembak API Midtrans Snap
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => 'Basic ' . base64_encode($serverKey . ':'),
+                'Content-Type'  => 'application/json',
+                'Accept'        => 'application/json',
+            ])->post('https://app.sandbox.midtrans.com/snap/v1/transactions', [
+                'transaction_details' => [
+                    'order_id'     => $orderId,
+                    'gross_amount' => $amount,
+                ],
+                'customer_details' => [
+                    'first_name' => auth()->user()->name,
+                    'email'      => auth()->user()->email,
+                ],
+                // Opsional: Langsung arahkan ke metode pembayaran yang dipilih di Flutter
+                'enabled_payments' => [$request->payment_type] 
+            ]);
 
             $result = $response->json();
 
-            // 6. Jika Midtrans berhasil merespons dengan Link Pembayaran
-            if ($response->successful() && isset($result['redirect_url'])) {
-                
-                // TODO (Opsional): Di sini nanti Anda bisa menyimpan data transaksi ke tabel database dengan status "Pending"
-
+            // 4. Kembalikan Link Pembayaran ke Flutter
+            if (isset($result['redirect_url'])) {
                 return response()->json([
                     'status' => 'success',
-                    'message' => 'Tagihan berhasil dibuat',
-                    'payment_url' => $result['redirect_url'] // <-- Ini yang ditangkap Flutter!
-                ], 200);
+                    'message' => 'Berhasil membuat tagihan',
+                    'redirect_url' => $result['redirect_url'] // <--- INI URL PEMBAYARANNYA
+                ]);
             }
 
-            // Jika Midtrans menolak (misal: Server Key salah)
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Gagal terhubung ke payment gateway',
-                'error' => $result
-            ], 500);
+            return response()->json(['status' => 'error', 'message' => 'Gagal terhubung ke Midtrans'], 500);
 
         } catch (\Exception $e) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
-            ], 500);
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
         }
     }
 }

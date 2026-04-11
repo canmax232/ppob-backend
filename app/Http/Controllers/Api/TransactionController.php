@@ -119,4 +119,57 @@ class TransactionController extends Controller
             'new_balance' => $user->balance
         ], 200);
     }
+
+    // ====================================================================
+    // API INTEGRASI MIDTRANS
+    // ====================================================================
+    public function requestMidtrans(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:10000',
+            'payment_type' => 'required|string'
+        ]);
+
+        // Kunci Rahasia Midtrans Anda (Masukkan Server Key Sandbox Midtrans Anda di sini)
+        // Sebaiknya taruh di file .env dengan nama MIDTRANS_SERVER_KEY
+        $serverKey = env('MIDTRANS_SERVER_KEY', 'SB-Mid-server-xxxxxxxxxxxxxxxxx'); 
+
+        $orderId = 'TOPUP-' . time() . '-' . auth()->id();
+        $amount = $request->amount;
+
+        try {
+            // Tembak API Midtrans Snap
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => 'Basic ' . base64_encode($serverKey . ':'),
+                'Content-Type'  => 'application/json',
+                'Accept'        => 'application/json',
+            ])->post('https://app.sandbox.midtrans.com/snap/v1/transactions', [
+                'transaction_details' => [
+                    'order_id'     => $orderId,
+                    'gross_amount' => $amount,
+                ],
+                'customer_details' => [
+                    'first_name' => auth()->user()->name,
+                    'email'      => auth()->user()->email,
+                ],
+                'enabled_payments' => [$request->payment_type] 
+            ]);
+
+            $result = $response->json();
+
+            // Kembalikan Link Pembayaran ke Flutter
+            if (isset($result['redirect_url'])) {
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Berhasil membuat tagihan',
+                    'redirect_url' => $result['redirect_url']
+                ], 200);
+            }
+
+            return response()->json(['status' => 'error', 'message' => 'Gagal terhubung ke Midtrans. Cek Server Key Anda.'], 500);
+
+        } catch (\Exception $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 500);
+        }
+    }
 }
