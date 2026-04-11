@@ -40,4 +40,6 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Ini Rute Midtrans yang baru kita buat di langkah sebelumnya
     Route::post('/deposit', [DepositController::class, 'store']); 
+    Route::get('/deposit/history', [\App\Http\Controllers\Api\DepositController::class, 'history']);
+    
 });

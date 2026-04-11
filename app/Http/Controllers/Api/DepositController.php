@@ -122,4 +122,21 @@ class DepositController extends Controller
             ], 500);
         }
     }
+    // --- TAMBAHKAN FUNGSI INI BOS ---
+    public function history(Request $request)
+    {
+        try {
+            $deposits = \App\Models\Deposit::where('user_id', $request->user()->id)
+                ->orderBy('id', 'desc')
+                ->limit(10)
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $deposits
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error DB: ' . $e->getMessage()], 500);
+        }
+    }
 }
