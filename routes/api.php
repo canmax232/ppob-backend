@@ -43,3 +43,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/deposit/history', [\App\Http\Controllers\Api\DepositController::class, 'history']);
     
 });
+
+Route::post('/verify-otp', [App\Http\Controllers\Api\AuthController::class, 'verifyOtp']);
