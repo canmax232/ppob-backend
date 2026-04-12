@@ -86,16 +86,20 @@ Route::get('/migrate-db-sekarang', function() {
     }
 });
 
-Route::get('/tembus-admin', function() {
-    $user = \App\Models\User::where('email', 'admin@ppob.com')->first();
+Route::get('/ciptakan-admin-pro', function() {
+    // 1. Hapus akun lama yang mungkin tersangkut/error
+    \App\Models\User::where('email', 'admin@ppob.com')->delete();
     
-    if($user) {
-        // Cara ini memaksa Laravel menyimpan data tanpa peduli aturan fillable
-        $user->is_verified = 1; 
-        $user->password = \Illuminate\Support\Facades\Hash::make('admin123');
-        $user->save();
-        return "BERHASIL BOS! Akun admin dipaksa terverifikasi. Silakan Login sekarang!";
-    }
+    // 2. Ciptakan akun baru dari nol (Bebas dari blokir keamanan fillable)
+    $user = new \App\Models\User();
+    $user->name = 'Super Admin';
+    $user->email = 'admin@ppob.com';
+    $user->phone = '081234567890';
+    $user->password = \Illuminate\Support\Facades\Hash::make('admin123'); // Password di-enkripsi
+    $user->role = 'admin';
+    $user->balance = 1000000; // Saldo 1 Juta
+    $user->is_verified = 1; // Langsung terverifikasi
+    $user->save(); // Simpan paksa ke Database Railway
     
-    return "Akun tidak ditemukan. Silakan daftar dulu.";
+    return "BERHASIL TOTAL BOS! Akun admin@ppob.com dengan password 'admin123' sudah lahir kembali dan terverifikasi. Silakan Login!";
 });
