@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\URL; // Wajib ada untuk memanggil HTTPS
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,8 +20,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // 2. Tambahkan kode ini untuk memaksa HTTPS di Railway
-        if (env('APP_ENV') !== 'local') {
+        // Paksa semua URL menggunakan HTTPS jika tidak di komputer lokal
+        // Menggunakan config() lebih aman dari env() saat proses build Railway
+        if (config('app.env') !== 'local') {
             URL::forceScheme('https');
         }
     }
