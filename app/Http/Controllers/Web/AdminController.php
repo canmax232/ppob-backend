@@ -25,6 +25,15 @@ class AdminController extends Controller
         $recentTransactions = Transaction::with('product')->orderBy('created_at', 'desc')->take(5)->get();
         $products = Product::orderBy('category_id')->get();
 
+        // Ambil data saldo server (asumsi Anda pakai Digiflazz atau sejenisnya)
+        $balance = 0;
+        try {
+            // Logika ambil saldo Bos di sini jika ada API-nya
+            $balance = 1000000; // Dummy saldo
+        } catch (\Exception $e) {}
+
+        $totalRevenue = Transaction::sum('amount');
+
         // --- DATA UNTUK GRAFIK (Pendapatan 7 Hari Terakhir) ---
         $chartData = Transaction::selectRaw('DATE(created_at) as date, SUM(amount) as total')
             ->groupBy('date')
@@ -32,122 +41,60 @@ class AdminController extends Controller
             ->take(7)
             ->get();
             
-        // Mengubah data menjadi format yang dibaca oleh Javascript (Chart.js)
         $chartDates = $chartData->pluck('date')->toJson();
         $chartTotals = $chartData->pluck('total')->toJson();
 
         return view('admin.dashboard', compact(
-            'totalUsers', 'totalProducts', 'totalTransactions', 
-            'recentTransactions', 'products', 
+            'balance', 'totalRevenue', 'recentTransactions', 'products', 
             'chartDates', 'chartTotals'
         ));
     }
 
-    // Fungsi Menyimpan Harga & Kode Baru (Manual)
+    // --- FUNGSI UPDATE HARGA & LOGO PRODUK (PEMBARUAN SAKTI) ---
     public function updatePrice(Request $request, $id)
     {
         $request->validate([
-            'price' => 'required|numeric',
-            'product_code' => 'required|string' 
+            'harga_jual' => 'required|numeric',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Validasi gambar
         ]);
-        
-        $product = Product::findOrFail($id);
-        $product->price = $request->price;
-        $product->product_code = $request->product_code; 
-        $product->save();
-
-        return back()->with('success', 'Produk ' . $product->name . ' berhasil diperbarui!');
-    }
-
-    // --- INI UPDATE FINAL SINKRONISASI BOS ---
-    // --- INI UPDATE FINAL SINKRONISASI BOS ---
-    public function syncDigiflazz()
-    {
-        $username = env('DIGIFLAZZ_USERNAME', '');
-        $apiKey = env('DIGIFLAZZ_API_KEY', '');
-        
-        if (empty($username) || empty($apiKey)) {
-            return back()->with('error', 'Username atau API Key Digiflazz belum diatur di file .env!');
-        }
-
-        $sign = md5($username . $apiKey . "pricelist");
 
         try {
-            $response = Http::post('https://api.digiflazz.com/v1/price-list', [
-                'cmd'  => 'prepaid',
-                'username' => $username,
-                'sign' => $sign
-            ]);
+            $product = Product::findOrFail($id);
+            $product->harga_jual = $request->harga_jual;
 
-            $apiResult = $response->json();
-
-            if (isset($apiResult['data']) && is_array($apiResult['data'])) {
-                if (isset($apiResult['data']['message'])) {
-                    return back()->with('error', 'Ditolak Digiflazz: ' . $apiResult['data']['message']);
+            // Jika admin mengupload gambar baru
+            if ($request->hasFile('image')) {
+                // 1. Hapus gambar lama jika ada (biar storage tidak penuh)
+                if ($product->image_url) {
+                    $oldPath = str_replace(url('storage/'), 'public/', $product->image_url);
+                    Storage::delete($oldPath);
                 }
 
-                $products = $apiResult['data'];
-                $syncedCount = 0;
+                // 2. Simpan gambar baru
+                $file = $request->file('image');
+                $filename = time() . '_' . $file->getClientOriginalName();
+                $file->storeAs('public/produk', $filename);
 
-                foreach ($products as $item) {
-                    if (isset($item['buyer_sku_code']) && isset($item['price'])) {
-                        
-                        $kategoriAsli = $item['category'] ?? 'Lainnya';
-                        $katLower = strtolower($kategoriAsli);
-
-                        // PEMETAAN CERDAS KE MENU MANUAL ANDA
-                        if (str_contains($katLower, 'pulsa')) {
-                            $namaKategori = 'Pulsa Nasional';
-                        } elseif (str_contains($katLower, 'data')) {
-                            $namaKategori = 'Paket Data';
-                        } elseif (str_contains($katLower, 'game')) {
-                            $namaKategori = 'Voucher Game';
-                        } elseif (str_contains($katLower, 'pln')) {
-                            $namaKategori = 'Token PLN';
-                        } elseif (str_contains($katLower, 'e-money') || str_contains($katLower, 'wallet')) {
-                            $namaKategori = 'e-Wallet';
-                        } else {
-                            $namaKategori = 'Lainnya';
-                        }
-
-                        // Hubungkan ke Kategori Utama Anda
-                        $category = Category::firstOrCreate(['name' => $namaKategori]);
-
-                        $productName = $item['product_name'] ?? 'Produk ' . $item['buyer_sku_code'];
-                        
-                        // Cari dan Update
-                        $product = Product::updateOrCreate(
-                            ['product_code' => $item['buyer_sku_code']], 
-                            [
-                                'name' => $productName,
-                                'brand' => $item['brand'] ?? 'Lainnya', // <--- INI KUNCI JAWABANNYA
-                                'original_price' => $item['price'], 
-                                'price' => $item['price'] + 2000,
-                                'category_id' => $category->id 
-                            ]
-                        );
-
-                        if ($product) {
-                            $syncedCount++;
-                        }
-                    }
-                }
-                return back()->with('success', 'Berhasil memilah ' . $syncedCount . ' produk ke Menu Utama Anda!');
+                // 3. Simpan URL baru ke database
+                $product->image_url = url('storage/produk/' . $filename);
             }
-            return back()->with('error', 'Gagal mengambil data. Pesan: ' . json_encode($apiResult));
+
+            $product->save();
+
+            return back()->with('success', 'Produk ' . $product->product_name . ' berhasil diperbarui!');
         } catch (\Exception $e) {
-            return back()->with('error', 'Terjadi kesalahan jaringan: ' . $e->getMessage());
+            return back()->with('error', 'Gagal update: ' . $e->getMessage());
         }
     }
 
+    // Fungsi untuk update Icon Kategori (dari Flutter Admin)
     public function updateKategoriIcon(Request $request, $id)
     {
-        // 1. Validasi pastikan yang dikirim adalah file gambar maksimal 2MB
         $request->validate([
             'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        $category = \App\Models\Category::find($id); // Sesuaikan dengan nama Model Bos
+        $category = Category::find($id);
 
         if (!$category) {
             return response()->json(['success' => false, 'message' => 'Kategori tidak ditemukan'], 404);
@@ -155,15 +102,10 @@ class AdminController extends Controller
 
         if ($request->hasFile('image')) {
             $file = $request->file('image');
-            
-            // 2. Buat nama file unik (Misal: 171289123_pulsa.png)
             $filename = time() . '_' . $file->getClientOriginalName();
             
-            // 3. Simpan fisik gambarnya ke folder: storage/app/public/kategori
             $file->storeAs('public/kategori', $filename);
 
-            // 4. Buat URL publik yang bisa dibaca Flutter, dan simpan ke Database
-            // env('APP_URL') akan otomatis mengikuti link Railway Anda
             $category->icon_url = url('storage/kategori/' . $filename);
             $category->save();
 
