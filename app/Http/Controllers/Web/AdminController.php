@@ -126,4 +126,33 @@ class AdminController extends Controller
             return back()->with('error', 'Error Jaringan: ' . $e->getMessage());
         }
     }
+
+    // Halaman khusus daftar kategori
+    public function categories()
+    {
+        $categories = Category::all();
+        return view('admin.categories', compact('categories'));
+    }
+
+    // Fungsi update khusus kategori (Logo & Nama)
+    public function updateCategory(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        $category = Category::findOrFail($id);
+        $category->name = $request->name;
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            $filename = time() . '_' . $file->getClientOriginalName();
+            $file->storeAs('public/kategori', $filename);
+            $category->icon_url = url('storage/kategori/' . $filename);
+        }
+
+        $category->save();
+        return back()->with('success', 'Kategori ' . $category->name . ' berhasil diupdate!');
+    }
 }

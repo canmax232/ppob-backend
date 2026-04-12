@@ -75,6 +75,10 @@ Route::middleware(['auth'])->group(function () {
 
     // Rute untuk Sinkronisasi Harga Digiflazz (Otomatis)
     Route::post('/admin/sync', [AdminController::class, 'syncDigiflazz']);
+
+    // Rute manajemen kategori admin
+    Route::get('/admin/categories', [AdminController::class, 'categories']);
+    Route::post('/admin/categories/{id}', [AdminController::class, 'updateCategory']);
 });
 
 
