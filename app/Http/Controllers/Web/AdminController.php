@@ -157,7 +157,10 @@ class AdminController extends Controller
                 $oldPath = str_replace(url('berkas/'), 'public/', $category->icon_url);
                 Storage::delete($oldPath);
             }
-            $file = $request->request->file('image') ?? $request->file('image');
+            
+            // PERBAIKAN ADA DI BARIS INI BOS! Cukup pakai $request->file saja:
+            $file = $request->file('image'); 
+            
             $filename = time() . '_' . $file->getClientOriginalName();
             $file->storeAs('public/kategori', $filename);
             
