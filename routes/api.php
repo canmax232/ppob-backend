@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\PPOBController;
 use App\Http\Controllers\Api\TopupController;
 use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\DepositController; // <--- Import Controller Midtrans yang baru kita buat
+use App\Http\Controllers\Web\AdminController;
 
 // =========================================================
 // RUTE PUBLIK (Bisa diakses tanpa login)
@@ -42,7 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/deposit', [DepositController::class, 'store']); 
     Route::get('/deposit/history', [\App\Http\Controllers\Api\DepositController::class, 'history']);
 
-    Route::post('/admin/kategori/{id}/update-icon', [\App\Http\Controllers\Api\CategoryController::class, 'updateIcon']);
+    Route::post('/admin/kategori/{id}/update-icon', [AdminController::class, 'updateKategoriIcon']);
     
 });
 

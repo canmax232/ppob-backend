@@ -9,6 +9,7 @@ use App\Models\Transaction;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http; 
+use Illuminate\Support\Facades\Storage; 
 
 class AdminController extends Controller
 {
@@ -137,5 +138,42 @@ class AdminController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Terjadi kesalahan jaringan: ' . $e->getMessage());
         }
+    }
+
+    public function updateKategoriIcon(Request $request, $id)
+    {
+        // 1. Validasi pastikan yang dikirim adalah file gambar maksimal 2MB
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        $category = \App\Models\Category::find($id); // Sesuaikan dengan nama Model Bos
+
+        if (!$category) {
+            return response()->json(['success' => false, 'message' => 'Kategori tidak ditemukan'], 404);
+        }
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image');
+            
+            // 2. Buat nama file unik (Misal: 171289123_pulsa.png)
+            $filename = time() . '_' . $file->getClientOriginalName();
+            
+            // 3. Simpan fisik gambarnya ke folder: storage/app/public/kategori
+            $file->storeAs('public/kategori', $filename);
+
+            // 4. Buat URL publik yang bisa dibaca Flutter, dan simpan ke Database
+            // env('APP_URL') akan otomatis mengikuti link Railway Anda
+            $category->icon_url = url('storage/kategori/' . $filename);
+            $category->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Gambar berhasil diperbarui',
+                'icon_url' => $category->icon_url
+            ], 200);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Gagal menerima file'], 400);
     }
 }

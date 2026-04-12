@@ -126,3 +126,8 @@ Route::get('/ciptakan-admin-pro', function() {
     
     return "BERHASIL TOTAL BOS! Akun admin@ppob.com dengan password 'admin123' lahir kembali. Silakan Login!";
 });
+
+Route::get('/buat-storage-link', function () {
+    \Illuminate\Support\Facades\Artisan::call('storage:link');
+    return 'SUKSES BOS! Jembatan gambar sudah dibangun. Gambar sekarang bisa dilihat publik!';
+});
