@@ -76,3 +76,12 @@ Route::get('/setup-database-rahasia', function () {
     ]);
     return 'MANTAP BOS! Database NIKOS STORE Berhasil Di-Install dan Diisi!';
 });
+
+Route::get('/migrate-db-sekarang', function() {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        return "Mantap Bos! Database di Railway berhasil dibuat dan di-migrate.";
+    } catch (\Exception $e) {
+        return "Waduh error Bos: " . $e->getMessage();
+    }
+});
