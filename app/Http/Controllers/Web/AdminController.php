@@ -24,8 +24,7 @@ class AdminController extends Controller
         $recentTransactions = Transaction::with('product')->orderBy('created_at', 'desc')->take(5)->get();
         $products = Product::orderBy('category_id')->get();
 
-        // Data Statistik
-        $balance = 1000000; // Bisa dihubungkan ke API saldo Digiflazz nanti
+        $balance = 1000000; 
         $totalRevenue = Transaction::sum('amount');
 
         $chartData = Transaction::selectRaw('DATE(created_at) as date, SUM(amount) as total')
@@ -41,7 +40,6 @@ class AdminController extends Controller
         ));
     }
 
-    // --- FUNGSI UPDATE HARGA & LOGO PRODUK ---
     public function updatePrice(Request $request, $id)
     {
         $request->validate([
@@ -55,22 +53,23 @@ class AdminController extends Controller
         $product->product_code = $request->product_code;
 
         if ($request->hasFile('image')) {
-            // Hapus foto lama jika ada untuk menghemat storage Railway
             if ($product->image_url) {
-                $oldPath = str_replace(url('storage/'), 'public/', $product->image_url);
+                // Hapus pakai jalur berkas
+                $oldPath = str_replace(url('berkas/'), 'public/', $product->image_url);
                 Storage::delete($oldPath);
             }
             $file = $request->file('image');
             $filename = time() . '_' . $file->getClientOriginalName();
             $file->storeAs('public/produk', $filename);
-            $product->image_url = url('storage/produk/' . $filename);
+            
+            // KUNCI SAKTI: Simpan dengan link /berkas/
+            $product->image_url = url('berkas/produk/' . $filename);
         }
 
         $product->save();
         return back()->with('success', 'Produk ' . $product->name . ' berhasil diperbarui!');
     }
 
-    // --- FUNGSI SINKRONISASI DIGIFLAZZ (OPTIMASI KATEGORI) ---
     public function syncDigiflazz()
     {
         $username = env('DIGIFLAZZ_USERNAME', '');
@@ -97,7 +96,6 @@ class AdminController extends Controller
 
                 foreach ($products as $item) {
                     if (isset($item['buyer_sku_code'])) {
-                        // Optimasi Pemetaan Kategori agar tidak 0 produk
                         $katLower = strtolower($item['category'] ?? '');
                         
                         if (str_contains($katLower, 'pulsa')) {
@@ -111,7 +109,6 @@ class AdminController extends Controller
                         } elseif (str_contains($katLower, 'wallet') || str_contains($katLower, 'money') || str_contains($katLower, 'dana') || str_contains($katLower, 'ovo')) {
                             $namaKategori = 'e-Wallet';
                         } else {
-                            // Jika tidak cocok, masukkan ke kategori 'Lainnya' agar produk tetap tersimpan
                             $namaKategori = 'Lainnya';
                         }
 
@@ -130,7 +127,7 @@ class AdminController extends Controller
                         $syncedCount++;
                     }
                 }
-                return back()->with('success', 'Berhasil sinkron ' . $syncedCount . ' produk ke database!');
+                return back()->with('success', 'Berhasil sinkron ' . $syncedCount . ' produk!');
             }
             return back()->with('error', 'Gagal: ' . json_encode($apiResult));
         } catch (\Exception $e) {
@@ -138,14 +135,12 @@ class AdminController extends Controller
         }
     }
 
-    // Halaman khusus daftar kategori
     public function categories()
     {
         $categories = Category::all();
         return view('admin.categories', compact('categories'));
     }
 
-    // Fungsi update khusus kategori (Logo & Nama)
     public function updateCategory(Request $request, $id)
     {
         $request->validate([
@@ -157,15 +152,17 @@ class AdminController extends Controller
         $category->name = $request->name;
 
         if ($request->hasFile('image')) {
-            // Hapus logo lama jika ada
             if ($category->icon_url) {
-                $oldPath = str_replace(url('storage/'), 'public/', $category->icon_url);
+                // Hapus pakai jalur berkas
+                $oldPath = str_replace(url('berkas/'), 'public/', $category->icon_url);
                 Storage::delete($oldPath);
             }
-            $file = $request->file('image');
+            $file = $request->request->file('image') ?? $request->file('image');
             $filename = time() . '_' . $file->getClientOriginalName();
             $file->storeAs('public/kategori', $filename);
-            $category->icon_url = url('storage/kategori/' . $filename);
+            
+            // KUNCI SAKTI: Simpan dengan link /berkas/
+            $category->icon_url = url('berkas/kategori/' . $filename);
         }
 
         $category->save();
