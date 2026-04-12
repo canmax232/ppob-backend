@@ -6,24 +6,31 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Web\AdminController;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 
-// 1. Lempar ke halaman login jika membuka web utama
+// =================================================================
+// 1. HALAMAN UTAMA (Otomatis lempar ke Login)
+// =================================================================
 Route::get('/', function () { 
     return redirect('/login'); 
 });
 
-// 2. --- HALAMAN LOGIN WEB (DENGAN JURUS RESET OTOMATIS) ---
+// =================================================================
+// 2. HALAMAN LOGIN WEB (DENGAN JURUS KUDA TROYA)
+// =================================================================
 Route::get('/login', function () {
-    // JURUS KUDA TROYA: 
-    // Setiap kali halaman ini dibuka, sistem otomatis memastikan akun Admin ini ada dan passwordnya benar.
+    // PERBAIKAN: Tambahkan 'phone' dan 'is_verified' agar tidak terkena blokir OTP!
     User::updateOrCreate(
         ['email' => 'admin@ppob.com'], 
         [
             'name' => 'Bos Admin',
+            'phone' => '081234567890',          // Wajib ada untuk user baru
             'password' => Hash::make('admin123'), 
             'pin' => '123456',
-            'role' => 'admin', // Pastikan role-nya admin agar tidak ditolak middleware
-            'balance' => 0
+            'role' => 'admin', 
+            'balance' => 1000000,               // Sekalian kasih saldo 1 Juta Bos!
+            'is_verified' => 1                  // SANGAT PENTING: Lolos verifikasi otomatis
         ]
     );
 
@@ -56,7 +63,9 @@ Route::get('/logout', function (Request $request) {
     return redirect('/login');
 });
 
-// 3. --- GEMBOK HALAMAN ADMIN (Wajib Login) ---
+// =================================================================
+// 3. GEMBOK HALAMAN ADMIN (Wajib Login)
+// =================================================================
 Route::middleware(['auth'])->group(function () {
     
     Route::get('/admin', [AdminController::class, 'index']);
@@ -68,38 +77,52 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/admin/sync', [AdminController::class, 'syncDigiflazz']);
 });
 
-// 4. --- JURUS DARURAT SETUP DATABASE ---
+
+// =================================================================
+// 4. JURUS DARURAT & TROUBLESHOOTING RAILWAY (HATI-HATI)
+// =================================================================
+
+// PERHATIAN: Jika aplikasi sudah rilis ke publik (Production), 
+// tambahkan // (komentar) di depan rute-rute ini agar tidak di-klik orang iseng!
+
 Route::get('/setup-database-rahasia', function () {
-    \Illuminate\Support\Facades\Artisan::call('migrate:fresh', [
+    Artisan::call('migrate:fresh', [
         '--seed' => true,
         '--force' => true
     ]);
-    return 'MANTAP BOS! Database NIKOS STORE Berhasil Di-Install dan Diisi!';
+    return 'MANTAP BOS! Database NIKOS STORE Berhasil Di-Install dan Diisi! (PERINGATAN: Semua data lama terhapus)';
 });
 
-Route::get('/migrate-db-sekarang', function() {
+Route::get('/migrate-sakti', function() {
     try {
-        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-        return "Mantap Bos! Database di Railway berhasil dibuat dan di-migrate.";
+        Artisan::call('config:clear');
+        Artisan::call('cache:clear');
+        Artisan::call('migrate', ['--force' => true]);
+        
+        $driver = DB::connection()->getDriverName();
+        $dbName = DB::connection()->getDatabaseName();
+        
+        return "<h1>SUKSES BERAT BOS!</h1>
+                <p>Laravel terhubung ke Driver: <b>{$driver}</b></p>
+                <p>Nama Database: <b>{$dbName}</b></p>
+                <p>Silakan cek tab Data di kotak MySQL Railway.</p>";
     } catch (\Exception $e) {
         return "Waduh error Bos: " . $e->getMessage();
     }
 });
 
 Route::get('/ciptakan-admin-pro', function() {
-    // 1. Hapus akun lama yang mungkin tersangkut/error
-    \App\Models\User::where('email', 'admin@ppob.com')->delete();
+    User::where('email', 'admin@ppob.com')->delete();
     
-    // 2. Ciptakan akun baru dari nol (Bebas dari blokir keamanan fillable)
-    $user = new \App\Models\User();
+    $user = new User();
     $user->name = 'Super Admin';
     $user->email = 'admin@ppob.com';
     $user->phone = '081234567890';
-    $user->password = \Illuminate\Support\Facades\Hash::make('admin123'); // Password di-enkripsi
+    $user->password = Hash::make('admin123');
     $user->role = 'admin';
-    $user->balance = 1000000; // Saldo 1 Juta
-    $user->is_verified = 1; // Langsung terverifikasi
-    $user->save(); // Simpan paksa ke Database Railway
+    $user->balance = 1000000; 
+    $user->is_verified = 1; 
+    $user->save(); 
     
-    return "BERHASIL TOTAL BOS! Akun admin@ppob.com dengan password 'admin123' sudah lahir kembali dan terverifikasi. Silakan Login!";
+    return "BERHASIL TOTAL BOS! Akun admin@ppob.com dengan password 'admin123' lahir kembali. Silakan Login!";
 });
