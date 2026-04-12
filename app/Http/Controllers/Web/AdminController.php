@@ -169,4 +169,42 @@ class AdminController extends Controller
         $category->save();
         return back()->with('success', 'Logo Kategori ' . $category->name . ' berhasil diperbarui!');
     }
+
+    // Halaman khusus daftar Brand/Merek Produk
+    public function brands()
+    {
+        // Ambil data unik berdasarkan brand agar tidak perlu edit satu per satu
+        $brands = Product::select('brand', 'image_url')
+                    ->get()
+                    ->unique('brand')
+                    ->sortBy('brand');
+                    
+        return view('admin.brands', compact('brands'));
+    }
+
+    // Fungsi update logo untuk SEMUA produk dalam 1 Brand
+    public function updateBrandLogo(Request $request)
+    {
+        $request->validate([
+            'brand' => 'required|string',
+            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        if ($request->hasFile('image')) {
+            $file = $request->file('image'); 
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            
+            // Simpan pakai move() persis seperti kategori kemarin agar anti corrupt
+            $file->move(storage_path('app/public/produk'), $filename);
+            
+            $imageUrl = url('berkas/produk/' . $filename);
+
+            // JURUS SAKTI: Update URL gambar untuk SEMUA produk yang nama brand-nya sama!
+            Product::where('brand', $request->brand)->update(['image_url' => $imageUrl]);
+            
+            return back()->with('success', 'Logo untuk semua produk ' . $request->brand . ' berhasil diperbarui!');
+        }
+
+        return back()->with('error', 'Pilih gambar terlebih dahulu!');
+    }
 }

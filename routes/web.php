@@ -79,6 +79,10 @@ Route::middleware(['auth'])->group(function () {
     // Rute manajemen kategori admin
     Route::get('/admin/categories', [AdminController::class, 'categories']);
     Route::post('/admin/categories/{id}', [AdminController::class, 'updateCategory']);
+
+    // Rute manajemen logo brand (merek) secara massal
+    Route::get('/admin/brands', [AdminController::class, 'brands']);
+    Route::post('/admin/brands/update', [AdminController::class, 'updateBrandLogo']);
 });
 
 
