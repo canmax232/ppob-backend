@@ -135,3 +135,24 @@ Route::get('/buat-storage-link', function () {
     \Illuminate\Support\Facades\Artisan::call('storage:link');
     return 'SUKSES BOS! Jembatan gambar sudah dibangun. Gambar sekarang bisa dilihat publik!';
 });
+
+// =================================================================
+// 5. JURUS SAKTI BYPASS CORS (UNTUK FLUTTER WEB)
+// =================================================================
+Route::get('/storage/{folder}/{filename}', function ($folder, $filename) {
+    $path = storage_path('app/public/' . $folder . '/' . $filename);
+
+    // Cek apakah gambarnya ada
+    if (!file_exists($path)) {
+        abort(404);
+    }
+
+    // Ambil file dan jenisnya (PNG/JPG)
+    $file = \Illuminate\Support\Facades\File::get($path);
+    $type = \Illuminate\Support\Facades\File::mimeType($path);
+
+    // Kembalikan gambar lengkap dengan surat izin bebas hambatan (CORS)
+    return response($file, 200)
+        ->header('Content-Type', $type)
+        ->header('Access-Control-Allow-Origin', '*'); // KUNCI UTAMA CORS
+});
