@@ -85,3 +85,15 @@ Route::get('/migrate-db-sekarang', function() {
         return "Waduh error Bos: " . $e->getMessage();
     }
 });
+
+Route::get('/verifikasi-admin', function() {
+    $user = \App\Models\User::where('email', 'admin@ppob.com')->first();
+    
+    if ($user) {
+        $user->is_verified = true;
+        $user->save();
+        return "SUKSES BOS! Akun admin@ppob.com sudah resmi terverifikasi. Silakan klik MASUK di aplikasi Flutter!";
+    }
+    
+    return "Waduh, akun admin@ppob.com belum terdaftar. Silakan daftar dulu di aplikasi.";
+});
