@@ -55,6 +55,7 @@ class AdminController extends Controller
         $product->product_code = $request->product_code;
 
         if ($request->hasFile('image')) {
+            // Hapus foto lama jika ada untuk menghemat storage Railway
             if ($product->image_url) {
                 $oldPath = str_replace(url('storage/'), 'public/', $product->image_url);
                 Storage::delete($oldPath);
@@ -69,7 +70,7 @@ class AdminController extends Controller
         return back()->with('success', 'Produk ' . $product->name . ' berhasil diperbarui!');
     }
 
-    // --- FUNGSI SINKRONISASI DIGIFLAZZ (SUDAH KEMBALI BOS!) ---
+    // --- FUNGSI SINKRONISASI DIGIFLAZZ (OPTIMASI KATEGORI) ---
     public function syncDigiflazz()
     {
         $username = env('DIGIFLAZZ_USERNAME', '');
@@ -96,13 +97,23 @@ class AdminController extends Controller
 
                 foreach ($products as $item) {
                     if (isset($item['buyer_sku_code'])) {
+                        // Optimasi Pemetaan Kategori agar tidak 0 produk
                         $katLower = strtolower($item['category'] ?? '');
-                        if (str_contains($katLower, 'pulsa')) $namaKategori = 'Pulsa Nasional';
-                        elseif (str_contains($katLower, 'data')) $namaKategori = 'Paket Data';
-                        elseif (str_contains($katLower, 'game')) $namaKategori = 'Voucher Game';
-                        elseif (str_contains($katLower, 'pln')) $namaKategori = 'Token PLN';
-                        elseif (str_contains($katLower, 'wallet')) $namaKategori = 'e-Wallet';
-                        else $namaKategori = 'Lainnya';
+                        
+                        if (str_contains($katLower, 'pulsa')) {
+                            $namaKategori = 'Pulsa Nasional';
+                        } elseif (str_contains($katLower, 'data') || str_contains($katLower, 'internet')) {
+                            $namaKategori = 'Paket Data';
+                        } elseif (str_contains($katLower, 'game') || str_contains($katLower, 'voucher')) {
+                            $namaKategori = 'Voucher Game';
+                        } elseif (str_contains($katLower, 'pln') || str_contains($katLower, 'listrik')) {
+                            $namaKategori = 'Token PLN';
+                        } elseif (str_contains($katLower, 'wallet') || str_contains($katLower, 'money') || str_contains($katLower, 'dana') || str_contains($katLower, 'ovo')) {
+                            $namaKategori = 'e-Wallet';
+                        } else {
+                            // Jika tidak cocok, masukkan ke kategori 'Lainnya' agar produk tetap tersimpan
+                            $namaKategori = 'Lainnya';
+                        }
 
                         $category = Category::firstOrCreate(['name' => $namaKategori]);
 
@@ -112,14 +123,14 @@ class AdminController extends Controller
                                 'name' => $item['product_name'] ?? 'Produk',
                                 'brand' => $item['brand'] ?? 'Lainnya',
                                 'original_price' => $item['price'], 
-                                'price' => $item['price'] + 2000, // Margin Bos
+                                'price' => $item['price'] + 2000, 
                                 'category_id' => $category->id 
                             ]
                         );
                         $syncedCount++;
                     }
                 }
-                return back()->with('success', 'Berhasil sinkron ' . $syncedCount . ' produk!');
+                return back()->with('success', 'Berhasil sinkron ' . $syncedCount . ' produk ke database!');
             }
             return back()->with('error', 'Gagal: ' . json_encode($apiResult));
         } catch (\Exception $e) {
@@ -146,6 +157,11 @@ class AdminController extends Controller
         $category->name = $request->name;
 
         if ($request->hasFile('image')) {
+            // Hapus logo lama jika ada
+            if ($category->icon_url) {
+                $oldPath = str_replace(url('storage/'), 'public/', $category->icon_url);
+                Storage::delete($oldPath);
+            }
             $file = $request->file('image');
             $filename = time() . '_' . $file->getClientOriginalName();
             $file->storeAs('public/kategori', $filename);
@@ -153,6 +169,6 @@ class AdminController extends Controller
         }
 
         $category->save();
-        return back()->with('success', 'Kategori ' . $category->name . ' berhasil diupdate!');
+        return back()->with('success', 'Logo Kategori ' . $category->name . ' berhasil diperbarui!');
     }
 }
