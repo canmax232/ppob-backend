@@ -140,18 +140,16 @@ Route::get('/buat-storage-link', function () {
 // 5. JURUS ANTI-NGINX & BYPASS CORS (UNTUK FLUTTER WEB)
 // =================================================================
 Route::get('/berkas/{folder}/{filename}', function ($folder, $filename) {
-    // Membaca langsung dari brankas dalam Laravel
     $path = storage_path('app/public/' . $folder . '/' . $filename);
 
     if (!file_exists($path)) {
-        abort(404);
+        // Berikan pesan error jelas jika file benar-benar tidak ada
+        return response()->json(['error' => 'Gambar gaib/tidak ditemukan di: ' . $path], 404);
     }
 
-    $file = \Illuminate\Support\Facades\File::get($path);
-    $type = \Illuminate\Support\Facades\File::mimeType($path);
-
-    // Memberikan gambar beserta stempel bebas masuk CORS!
-    return response($file, 200)
-        ->header('Content-Type', $type)
-        ->header('Access-Control-Allow-Origin', '*'); 
+    // PERBAIKAN: Gunakan response()->file() agar gambar tidak corrupt
+    return response()->file($path, [
+        'Access-Control-Allow-Origin' => '*',
+        'Cache-Control' => 'no-cache, must-revalidate'
+    ]);
 });

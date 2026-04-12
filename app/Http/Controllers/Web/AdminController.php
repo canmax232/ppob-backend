@@ -54,15 +54,14 @@ class AdminController extends Controller
 
         if ($request->hasFile('image')) {
             if ($product->image_url) {
-                // Hapus pakai jalur berkas
                 $oldPath = str_replace(url('berkas/'), 'public/', $product->image_url);
                 Storage::delete($oldPath);
             }
             $file = $request->file('image');
-            $filename = time() . '_' . $file->getClientOriginalName();
+            // PERBAIKAN: Buat nama file sangat aman tanpa spasi
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
             $file->storeAs('public/produk', $filename);
             
-            // KUNCI SAKTI: Simpan dengan link /berkas/
             $product->image_url = url('berkas/produk/' . $filename);
         }
 
@@ -153,18 +152,16 @@ class AdminController extends Controller
 
         if ($request->hasFile('image')) {
             if ($category->icon_url) {
-                // Hapus pakai jalur berkas
                 $oldPath = str_replace(url('berkas/'), 'public/', $category->icon_url);
                 Storage::delete($oldPath);
             }
             
-            // PERBAIKAN ADA DI BARIS INI BOS! Cukup pakai $request->file saja:
             $file = $request->file('image'); 
             
-            $filename = time() . '_' . $file->getClientOriginalName();
+            // PERBAIKAN: Nama file sangat aman, dijamin server tidak kebingungan
+            $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
             $file->storeAs('public/kategori', $filename);
             
-            // KUNCI SAKTI: Simpan dengan link /berkas/
             $category->icon_url = url('berkas/kategori/' . $filename);
         }
 
