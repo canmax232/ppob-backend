@@ -18,6 +18,17 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable; // <-- 3. Sisipkan HasApiTokens di sini
 
+    protected $fillable = [
+        'name',
+        'email',
+        'password',
+        'phone',        // Tambahkan ini
+        'otp',          // Tambahkan ini
+        'is_verified',  // Tambahkan ini
+        'balance',      // Tambahkan ini
+        'role',         // Tambahkan ini
+    ];
+
     /**
      * Get the attributes that should be cast.
      *

@@ -86,18 +86,16 @@ Route::get('/migrate-db-sekarang', function() {
     }
 });
 
-Route::get('/buat-admin-otomatis', function() {
-    $user = \App\Models\User::updateOrCreate(
-        ['email' => 'admin@ppob.com'], // Cari email ini
-        [
-            'name' => 'Bos Admin',
-            'phone' => '081234567890',
-            'password' => \Illuminate\Support\Facades\Hash::make('admin123'), // Password diset jadi admin123
-            'role' => 'member',
-            'balance' => 1000000, // Langsung kasih saldo 1 Juta!
-            'is_verified' => true, // Langsung lolos verifikasi OTP
-        ]
-    );
+Route::get('/tembus-admin', function() {
+    $user = \App\Models\User::where('email', 'admin@ppob.com')->first();
     
-    return "BERES BOS! Akun admin@ppob.com dengan password 'admin123' sudah berhasil diciptakan dan diverifikasi di server Railway. Silakan Login!";
+    if($user) {
+        // Cara ini memaksa Laravel menyimpan data tanpa peduli aturan fillable
+        $user->is_verified = 1; 
+        $user->password = \Illuminate\Support\Facades\Hash::make('admin123');
+        $user->save();
+        return "BERHASIL BOS! Akun admin dipaksa terverifikasi. Silakan Login sekarang!";
+    }
+    
+    return "Akun tidak ditemukan. Silakan daftar dulu.";
 });
