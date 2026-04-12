@@ -86,14 +86,18 @@ Route::get('/migrate-db-sekarang', function() {
     }
 });
 
-Route::get('/verifikasi-admin', function() {
-    $user = \App\Models\User::where('email', 'admin@ppob.com')->first();
+Route::get('/buat-admin-otomatis', function() {
+    $user = \App\Models\User::updateOrCreate(
+        ['email' => 'admin@ppob.com'], // Cari email ini
+        [
+            'name' => 'Bos Admin',
+            'phone' => '081234567890',
+            'password' => \Illuminate\Support\Facades\Hash::make('admin123'), // Password diset jadi admin123
+            'role' => 'member',
+            'balance' => 1000000, // Langsung kasih saldo 1 Juta!
+            'is_verified' => true, // Langsung lolos verifikasi OTP
+        ]
+    );
     
-    if ($user) {
-        $user->is_verified = true;
-        $user->save();
-        return "SUKSES BOS! Akun admin@ppob.com sudah resmi terverifikasi. Silakan klik MASUK di aplikasi Flutter!";
-    }
-    
-    return "Waduh, akun admin@ppob.com belum terdaftar. Silakan daftar dulu di aplikasi.";
+    return "BERES BOS! Akun admin@ppob.com dengan password 'admin123' sudah berhasil diciptakan dan diverifikasi di server Railway. Silakan Login!";
 });
