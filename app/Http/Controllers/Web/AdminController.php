@@ -58,9 +58,10 @@ class AdminController extends Controller
                 Storage::delete($oldPath);
             }
             $file = $request->file('image');
-            // PERBAIKAN: Buat nama file sangat aman tanpa spasi
             $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $file->storeAs('public/produk', $filename);
+            
+            // JURUS BRUTAL: Paksa pindah persis ke titik kordinat yang diawasi!
+            $file->move(storage_path('app/public/produk'), $filename);
             
             $product->image_url = url('berkas/produk/' . $filename);
         }
@@ -157,10 +158,10 @@ class AdminController extends Controller
             }
             
             $file = $request->file('image'); 
-            
-            // PERBAIKAN: Nama file sangat aman, dijamin server tidak kebingungan
             $filename = time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
-            $file->storeAs('public/kategori', $filename);
+            
+            // JURUS BRUTAL: Paksa pindah persis ke titik kordinat yang diawasi!
+            $file->move(storage_path('app/public/kategori'), $filename);
             
             $category->icon_url = url('berkas/kategori/' . $filename);
         }
