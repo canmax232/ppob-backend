@@ -51,78 +51,79 @@
 
         <div class="row">
             <div class="col-lg-8">
-                <div class="card border-0 shadow-sm mb-4">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-box-seam me-2"></i> Manajemen Produk & Harga</h5>
+                <div class="card p-4 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0"><i class="bi bi-box-seam"></i> Manajemen Produk</h5>
+                        
+                        <form action="/admin/sync" method="POST" class="m-0">
+                            @csrf
+                            <button type="submit" class="btn btn-sm btn-primary shadow-sm">
+                                <i class="bi bi-arrow-repeat"></i> Sinkronkan Harga Digiflazz
+                            </button>
+                        </form>
                     </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Gambar</th>
-                                        <th>Nama Produk</th>
-                                        <th>Harga Pusat</th>
-                                        <th>Harga Jual</th>
-                                        <th class="text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($products as $item)
-                                    <tr>
-                                        <td>
-                                            @if($item->image_url)
-                                                <img src="{{ $item->image_url }}" class="product-img shadow-sm" alt="logo">
-                                            @else
-                                                <div class="bg-secondary text-white product-img d-flex align-items-center justify-content-center">
-                                                    <i class="bi bi-image"></i>
-                                                </div>
-                                            @endif
-                                        </td>
-                                        <td>
-                                            <div class="fw-bold text-dark">{{ $item->product_name }}</div>
-                                            <small class="text-muted">{{ $item->brand }} - {{ $item->category }}</small>
-                                        </td>
-                                        <td class="text-muted">Rp {{ number_format($item->price, 0, ',', '.') }}</td>
-                                        <td class="fw-bold text-primary">Rp {{ number_format($item->harga_jual, 0, ',', '.') }}</td>
-                                        <td class="text-center">
-                                            <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editPrice{{ $item->id }}">
-                                                <i class="bi bi-pencil-square"></i> Edit
-                                            </button>
-                                        </td>
-                                    </tr>
 
-                                    <div class="modal fade" id="editPrice{{ $item->id }}" tabindex="-1">
-                                        <div class="modal-dialog modal-dialog-centered">
-                                            <form action="/admin/update-price/{{ $item->id }}" method="POST" enctype="multipart/form-data" class="modal-content">
-                                                @csrf
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Edit Produk: {{ $item->product_name }}</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label class="form-label fw-bold">Harga Jual Baru (Rp)</label>
-                                                        <input type="number" name="harga_jual" class="form-control form-control-lg" value="{{ $item->harga_jual }}" required>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Gambar</th>
+                                    <th>Nama Produk</th>
+                                    <th>Harga Jual</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($products as $prod)
+                                <tr>
+                                    <td>
+                                        @if($prod->image_url)
+                                            <img src="{{ $prod->image_url }}" style="width: 40px; border-radius: 5px;">
+                                        @else
+                                            <i class="bi bi-image text-muted" style="font-size: 24px;"></i>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">{{ $prod->name }}</div>
+                                        <small class="text-muted">{{ $prod->product_code }}</small>
+                                    </td>
+                                    <td class="fw-bold text-success">Rp {{ number_format($prod->price, 0, ',', '.') }}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#editModal{{ $prod->id }}">Edit</button>
+                                        
+                                        <div class="modal fade" id="editModal{{ $prod->id }}" tabindex="-1">
+                                            <div class="modal-dialog">
+                                                <form action="/admin/product/{{ $prod->id }}" method="POST" enctype="multipart/form-data" class="modal-content text-start">
+                                                    @csrf
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Edit: {{ $prod->name }}</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                     </div>
-                                                    
-                                                    <div class="mb-3">
-                                                        <label class="form-label fw-bold">Ganti Gambar/Logo Produk</label>
-                                                        <input type="file" name="image" class="form-control" accept="image/png, image/jpeg, image/jpg">
-                                                        <div class="form-text text-danger">*Maksimal 2MB (PNG/JPG)</div>
+                                                    <div class="modal-body">
+                                                        <div class="mb-3">
+                                                            <label class="fw-bold">Kode SKU</label>
+                                                            <input type="text" name="product_code" class="form-control" value="{{ $prod->product_code }}">
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="fw-bold">Harga Jual</label>
+                                                            <input type="number" name="harga_jual" class="form-control" value="{{ $prod->price }}">
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="fw-bold">Update Logo Produk</label>
+                                                            <input type="file" name="image" class="form-control" accept="image/*">
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                                                    <button type="submit" class="btn btn-primary px-4">Simpan Perubahan</button>
-                                                </div>
-                                            </form>
+                                                    <div class="modal-footer">
+                                                        <button type="submit" class="btn btn-success w-100">Simpan Perubahan</button>
+                                                    </div>
+                                                </form>
+                                            </div>
                                         </div>
-                                    </div>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

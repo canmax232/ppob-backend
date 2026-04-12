@@ -15,7 +15,6 @@ class AdminController extends Controller
 {
     public function index()
     {
-        // Pengaman Ganda
         if (auth()->user()->role !== 'admin') abort(403);
 
         $totalUsers = User::count();
@@ -25,97 +24,106 @@ class AdminController extends Controller
         $recentTransactions = Transaction::with('product')->orderBy('created_at', 'desc')->take(5)->get();
         $products = Product::orderBy('category_id')->get();
 
-        // Ambil data saldo server (asumsi Anda pakai Digiflazz atau sejenisnya)
-        $balance = 0;
-        try {
-            // Logika ambil saldo Bos di sini jika ada API-nya
-            $balance = 1000000; // Dummy saldo
-        } catch (\Exception $e) {}
-
+        // Data Statistik
+        $balance = 1000000; // Bisa dihubungkan ke API saldo Digiflazz nanti
         $totalRevenue = Transaction::sum('amount');
 
-        // --- DATA UNTUK GRAFIK (Pendapatan 7 Hari Terakhir) ---
         $chartData = Transaction::selectRaw('DATE(created_at) as date, SUM(amount) as total')
-            ->groupBy('date')
-            ->orderBy('date', 'asc')
-            ->take(7)
-            ->get();
+            ->groupBy('date')->orderBy('date', 'asc')->take(7)->get();
             
         $chartDates = $chartData->pluck('date')->toJson();
         $chartTotals = $chartData->pluck('total')->toJson();
 
         return view('admin.dashboard', compact(
-            'balance', 'totalRevenue', 'recentTransactions', 'products', 
+            'totalUsers', 'totalProducts', 'totalTransactions', 
+            'recentTransactions', 'products', 'balance', 'totalRevenue',
             'chartDates', 'chartTotals'
         ));
     }
 
-    // --- FUNGSI UPDATE HARGA & LOGO PRODUK (PEMBARUAN SAKTI) ---
+    // --- FUNGSI UPDATE HARGA & LOGO PRODUK ---
     public function updatePrice(Request $request, $id)
     {
         $request->validate([
             'harga_jual' => 'required|numeric',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048', // Validasi gambar
+            'product_code' => 'required|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         ]);
-
-        try {
-            $product = Product::findOrFail($id);
-            $product->harga_jual = $request->harga_jual;
-
-            // Jika admin mengupload gambar baru
-            if ($request->hasFile('image')) {
-                // 1. Hapus gambar lama jika ada (biar storage tidak penuh)
-                if ($product->image_url) {
-                    $oldPath = str_replace(url('storage/'), 'public/', $product->image_url);
-                    Storage::delete($oldPath);
-                }
-
-                // 2. Simpan gambar baru
-                $file = $request->file('image');
-                $filename = time() . '_' . $file->getClientOriginalName();
-                $file->storeAs('public/produk', $filename);
-
-                // 3. Simpan URL baru ke database
-                $product->image_url = url('storage/produk/' . $filename);
-            }
-
-            $product->save();
-
-            return back()->with('success', 'Produk ' . $product->product_name . ' berhasil diperbarui!');
-        } catch (\Exception $e) {
-            return back()->with('error', 'Gagal update: ' . $e->getMessage());
-        }
-    }
-
-    // Fungsi untuk update Icon Kategori (dari Flutter Admin)
-    public function updateKategoriIcon(Request $request, $id)
-    {
-        $request->validate([
-            'image' => 'required|image|mimes:jpeg,png,jpg|max:2048',
-        ]);
-
-        $category = Category::find($id);
-
-        if (!$category) {
-            return response()->json(['success' => false, 'message' => 'Kategori tidak ditemukan'], 404);
-        }
+        
+        $product = Product::findOrFail($id);
+        $product->price = $request->harga_jual;
+        $product->product_code = $request->product_code;
 
         if ($request->hasFile('image')) {
+            if ($product->image_url) {
+                $oldPath = str_replace(url('storage/'), 'public/', $product->image_url);
+                Storage::delete($oldPath);
+            }
             $file = $request->file('image');
             $filename = time() . '_' . $file->getClientOriginalName();
-            
-            $file->storeAs('public/kategori', $filename);
-
-            $category->icon_url = url('storage/kategori/' . $filename);
-            $category->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Gambar berhasil diperbarui',
-                'icon_url' => $category->icon_url
-            ], 200);
+            $file->storeAs('public/produk', $filename);
+            $product->image_url = url('storage/produk/' . $filename);
         }
 
-        return response()->json(['success' => false, 'message' => 'Gagal menerima file'], 400);
+        $product->save();
+        return back()->with('success', 'Produk ' . $product->name . ' berhasil diperbarui!');
+    }
+
+    // --- FUNGSI SINKRONISASI DIGIFLAZZ (SUDAH KEMBALI BOS!) ---
+    public function syncDigiflazz()
+    {
+        $username = env('DIGIFLAZZ_USERNAME', '');
+        $apiKey = env('DIGIFLAZZ_API_KEY', '');
+        
+        if (empty($username) || empty($apiKey)) {
+            return back()->with('error', 'Cek .env! Username/API Key kosong.');
+        }
+
+        $sign = md5($username . $apiKey . "pricelist");
+
+        try {
+            $response = Http::post('https://api.digiflazz.com/v1/price-list', [
+                'cmd'  => 'prepaid',
+                'username' => $username,
+                'sign' => $sign
+            ]);
+
+            $apiResult = $response->json();
+
+            if (isset($apiResult['data']) && is_array($apiResult['data'])) {
+                $products = $apiResult['data'];
+                $syncedCount = 0;
+
+                foreach ($products as $item) {
+                    if (isset($item['buyer_sku_code'])) {
+                        $katLower = strtolower($item['category'] ?? '');
+                        if (str_contains($katLower, 'pulsa')) $namaKategori = 'Pulsa Nasional';
+                        elseif (str_contains($katLower, 'data')) $namaKategori = 'Paket Data';
+                        elseif (str_contains($katLower, 'game')) $namaKategori = 'Voucher Game';
+                        elseif (str_contains($katLower, 'pln')) $namaKategori = 'Token PLN';
+                        elseif (str_contains($katLower, 'wallet')) $namaKategori = 'e-Wallet';
+                        else $namaKategori = 'Lainnya';
+
+                        $category = Category::firstOrCreate(['name' => $namaKategori]);
+
+                        Product::updateOrCreate(
+                            ['product_code' => $item['buyer_sku_code']], 
+                            [
+                                'name' => $item['product_name'] ?? 'Produk',
+                                'brand' => $item['brand'] ?? 'Lainnya',
+                                'original_price' => $item['price'], 
+                                'price' => $item['price'] + 2000, // Margin Bos
+                                'category_id' => $category->id 
+                            ]
+                        );
+                        $syncedCount++;
+                    }
+                }
+                return back()->with('success', 'Berhasil sinkron ' . $syncedCount . ' produk!');
+            }
+            return back()->with('error', 'Gagal: ' . json_encode($apiResult));
+        } catch (\Exception $e) {
+            return back()->with('error', 'Error Jaringan: ' . $e->getMessage());
+        }
     }
 }
